@@ -6,6 +6,14 @@ When a user provides a **property listing link or price/rent details**, the engi
 
 ---
 
+## 🎮 Interactive Web Playground
+
+Double-click `ui/playground.html` in any browser to test scenarios dynamically with sliders and live metric cards.
+
+![Playground Preview](docs/playground_preview.png)
+
+---
+
 ## 🚀 Quick Example & Real Output
 
 ### CLI Execution
@@ -90,12 +98,6 @@ Where target multipliers are:
 * **BEAT (+15% / 1.15x):** Renter achieves 15% higher terminal wealth.
 * **CRUSH (+35% / 1.35x):** Renter achieves 35% higher terminal wealth.
 * **Saturation Check:** If $r_{\text{target}} \le -30\%$ or $\ge +40\%$, flags `SATURATED` (one side structurally dominates across all realistic market returns).
-
----
-
-## 🎮 Interactive Web Playground
-
-Open `ui/playground.html` in any browser to dynamically test scenarios with sliders and real-time equity comparison charts.
 
 ---
 

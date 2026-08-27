@@ -1,4 +1,4 @@
-﻿# 🏠 Turkey House Buy vs. Rent Financial Engine
+﻿# 🏠 Turkey House Buy vs. Rent Financial Engine (AI SKILL)
 
 A quantitative financial engine and AI agent skill that evaluates whether **buying a home** or **renting and investing the difference** (in stocks, funds, ETFs) yields greater net wealth over a default **10-year horizon**.
 

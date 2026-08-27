@@ -8,10 +8,13 @@ When a user provides a **property listing link or price/rent details**, the engi
 
 ## 🎮 Interactive Web Playground
 
-Open `ui/playground.html` in any browser to test scenarios dynamically with sliders and live metric cards.
+> 🚀 **Live Demo:** [**Open Live Playground in Your Browser**](https://egesnr.github.io/turkey-house-buy-vs-rent-skill/)  
+> *(No installation needed — runs directly in your browser)*
 
 <p align="center">
-  <img src="docs/playground_preview.png" alt="Interactive Web Playground Preview" width="760" style="max-width: 100%; border-radius: 8px;">
+  <a href="https://egesnr.github.io/turkey-house-buy-vs-rent-skill/">
+    <img src="docs/playground_preview.png" alt="Interactive Web Playground Preview" width="760" style="max-width: 100%; border-radius: 8px;">
+  </a>
 </p>
 
 ---

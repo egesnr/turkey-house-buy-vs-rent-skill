@@ -8,9 +8,11 @@ When a user provides a **property listing link or price/rent details**, the engi
 
 ## 🎮 Interactive Web Playground
 
-Double-click `ui/playground.html` in any browser to test scenarios dynamically with sliders and live metric cards.
+Open `ui/playground.html` in any browser to test scenarios dynamically with sliders and live metric cards.
 
-![Playground Preview](docs/playground_preview.png)
+<p align="center">
+  <img src="docs/playground_preview.png" alt="Interactive Web Playground Preview" width="760" style="max-width: 100%; border-radius: 8px;">
+</p>
 
 ---
 

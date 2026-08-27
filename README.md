@@ -8,11 +8,11 @@ When a user provides a **property listing link or price/rent details**, the engi
 
 ## 🎮 Interactive Web Playground
 
-> 🚀 **Live Demo:** [**Open Live Playground in Your Browser**](https://egesnr.github.io/turkey-house-buy-vs-rent-skill/)  
+> 🚀 **Live Demo:** [**👉 Open Live Playground in Your Browser**](https://egesnr.github.io/turkey-house-buy-vs-rent-skill/ui/playground.html)  
 > *(No installation needed — runs directly in your browser)*
 
 <p align="center">
-  <a href="https://egesnr.github.io/turkey-house-buy-vs-rent-skill/">
+  <a href="https://egesnr.github.io/turkey-house-buy-vs-rent-skill/ui/playground.html">
     <img src="docs/playground_preview.png" alt="Interactive Web Playground Preview" width="760" style="max-width: 100%; border-radius: 8px;">
   </a>
 </p>

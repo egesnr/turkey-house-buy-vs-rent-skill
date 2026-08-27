@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Turkey Buy vs. Rent Evaluator Engine (v2.3)
+Turkey Buy vs. Rent Evaluator Engine (v2.4)
 Calculates real estate vs. stock market wealth differential with:
 - Two-phase P/R mean reversion
-- Dynamic Mortgage Refinancing (Law No. 6502 2% cap)
-- Rate-Drop Demand Shock Elasticity
+- Dynamic economically-optimal Mortgage Refinancing (2% refinancing cost assumption)
+- Long-run mortgage-rate normalization path (no property-price demand shock)
 - 5-Year Turkish Capital Gains Tax Exemption (GVK Mük. m.80), inflation-indexed cost basis
 - Buy-side AND sell-side transaction costs (tapu harci etc.)
 - Hurdle Rate Solver (Esik Getiri Motoru for Tie, +15%, +35% wealth targets)
@@ -107,10 +107,36 @@ def remaining_balance(loan, annual_rate, term_years, years_elapsed):
     return loan * top / bottom
 
 
+def choose_refi_plan(initial_loan, mortgage_rate, term, target_rate, normalize_years, refi_cost=0.02):
+    """Choose the single refinancing year that minimizes remaining real debt-service cost.
+
+    The market mortgage rate is assumed to converge linearly from today's real rate
+    toward a long-run normalized real rate. Refinancing is not forced in a fixed year:
+    every candidate year is evaluated including the refinancing cost, and no refinance
+    is chosen when staying with the original loan is cheaper.
+    """
+    if target_rate is None or target_rate >= mortgage_rate or term <= 1:
+        return None, None
+    original_payment = monthly_payment(initial_loan, mortgage_rate, term)
+    best = (original_payment * term * 12, None, None)
+    for year in range(1, term):
+        frac = min(1.0, year / max(1, normalize_years))
+        market_rate = mortgage_rate + (target_rate - mortgage_rate) * frac
+        balance = remaining_balance(initial_loan, mortgage_rate, term, year)
+        remaining_years = term - year
+        new_loan = balance * (1 + refi_cost)
+        new_payment = monthly_payment(new_loan, market_rate, remaining_years)
+        paid_before = original_payment * year * 12
+        total_cost = paid_before + new_payment * remaining_years * 12
+        if total_cost < best[0]:
+            best = (total_cost, year, market_rate)
+    return best[1], best[2]
+
+
 def simulate_one(price, rent_month, down_pct, mortgage_rate, term, hold,
                  own_cost_rate, buy_tx_cost, sell_tx_cost, cum_inflation,
                  a_catchup, years_to_close, rent_growth, stock_return,
-                 refi_year=None, refi_rate=None, demand_alpha=1.2,
+                 refi_target_rate=None, refi_normalize_years=5, refi_cost=0.02,
                  appreciation_noise_fn=None, stock_noise_fn=None):
 
     initial_loan = 1.0 - down_pct
@@ -119,6 +145,9 @@ def simulate_one(price, rent_month, down_pct, mortgage_rate, term, hold,
     current_term = term
     current_rate = mortgage_rate
     elapsed_since_refi = 0
+    refi_year, refi_rate = choose_refi_plan(
+        initial_loan, mortgage_rate, term, refi_target_rate, refi_normalize_years, refi_cost
+    )
 
     r0_month = rent_month / price
     H = 1.0
@@ -129,10 +158,6 @@ def simulate_one(price, rent_month, down_pct, mortgage_rate, term, hold,
         elapsed_since_refi += 1
 
         base_growth = a_catchup if year <= years_to_close else rent_growth
-        if refi_year and year == refi_year and refi_rate and refi_rate < mortgage_rate:
-            rate_drop = mortgage_rate - refi_rate
-            base_growth += demand_alpha * rate_drop
-
         growth = base_growth
         if appreciation_noise_fn:
             growth += appreciation_noise_fn()
@@ -140,8 +165,8 @@ def simulate_one(price, rent_month, down_pct, mortgage_rate, term, hold,
 
         if refi_year and year == refi_year and refi_rate and refi_rate < mortgage_rate:
             bal_before = remaining_balance(current_loan_base, current_rate, current_term, elapsed_since_refi - 1)
-            current_loan_base = bal_before * 1.02
-            current_term = term - (refi_year - 1)
+            current_loan_base = bal_before * (1 + refi_cost)
+            current_term = term - refi_year
             current_rate = refi_rate
             elapsed_since_refi = 1
             current_pay = monthly_payment(current_loan_base, current_rate, current_term)
@@ -177,14 +202,13 @@ def find_hurdle_rate(args, a_catchup, target_mult=1.0, use_refi=True):
     no realistic finite hurdle rate exists (one side structurally
     dominates regardless of stock performance).
     """
-    refi_y = args.refi_year if use_refi else None
-    refi_r = args.refi_rate if use_refi else None
+    refi_target = args.refi_target_real if use_refi else None
 
     target_buy_wealth, _ = simulate_one(
         args.price, args.rent, args.down_pct, args.mortgage_real, args.term, args.hold,
         args.own_cost, args.buy_tx_cost, args.sell_tx_cost, args.cum_inflation,
         a_catchup, args.years_to_close, args.rent_growth, 0.0,
-        refi_year=refi_y, refi_rate=refi_r, demand_alpha=args.demand_alpha
+        refi_target_rate=refi_target, refi_normalize_years=args.refi_normalize_years, refi_cost=args.refi_cost
     )
     target_portfolio = target_buy_wealth * target_mult
 
@@ -195,7 +219,7 @@ def find_hurdle_rate(args, a_catchup, target_mult=1.0, use_refi=True):
             args.price, args.rent, args.down_pct, args.mortgage_real, args.term, args.hold,
             args.own_cost, args.buy_tx_cost, args.sell_tx_cost, args.cum_inflation,
             a_catchup, args.years_to_close, args.rent_growth, mid,
-            refi_year=refi_y, refi_rate=refi_r, demand_alpha=args.demand_alpha
+            refi_target_rate=refi_target, refi_normalize_years=args.refi_normalize_years, refi_cost=args.refi_cost
         )
         if rent_w < target_portfolio:
             low = mid
@@ -215,7 +239,7 @@ def find_hurdle_rate(args, a_catchup, target_mult=1.0, use_refi=True):
 
 
 def main():
-    p = argparse.ArgumentParser(description="Turkey Buy vs Rent Evaluator (v2.3)")
+    p = argparse.ArgumentParser(description="Turkey Buy vs Rent Evaluator (v2.4)")
     p.add_argument("--price", type=float, required=True)
     p.add_argument("--rent", type=float, required=True)
     p.add_argument("--down-pct", type=float, default=0.50)
@@ -235,9 +259,12 @@ def main():
     p.add_argument("--years-to-close", type=int, default=7)
     p.add_argument("--rent-growth", type=float, default=0.01)
     p.add_argument("--stock-return", type=float, default=0.05)
-    p.add_argument("--refi-year", type=int, default=3)
-    p.add_argument("--refi-rate", type=float, default=0.04)
-    p.add_argument("--demand-alpha", type=float, default=1.2)
+    p.add_argument("--refi-target-real", type=float, default=0.04,
+                    help="Long-run normalized real mortgage rate used for the refinancing path.")
+    p.add_argument("--refi-normalize-years", type=int, default=5,
+                    help="Years over which the market real mortgage rate converges toward --refi-target-real.")
+    p.add_argument("--refi-cost", type=float, default=0.02,
+                    help="Refinancing cost as a fraction of remaining principal (default 2%%).")
     p.add_argument("--export-html", type=str, default=None,
                     help="Reserved -- HTML playground is now a separate static file (see ui/playground.html), "
                          "not generated by this script.")
@@ -269,7 +296,7 @@ def main():
         args.price, args.rent, args.down_pct, args.mortgage_real, args.term, args.hold,
         args.own_cost, args.buy_tx_cost, args.sell_tx_cost, args.cum_inflation,
         a_catchup, args.years_to_close, args.rent_growth, args.stock_return,
-        refi_year=args.refi_year, refi_rate=args.refi_rate, demand_alpha=args.demand_alpha
+        refi_target_rate=args.refi_target_real, refi_normalize_years=args.refi_normalize_years, refi_cost=args.refi_cost
     )
     diff_dyn = (buy_dyn - rent_dyn) * 100
     verdict = "BUY" if diff_dyn >= 0 else "RENT"
@@ -277,6 +304,10 @@ def main():
     initial_outlay = (args.down_pct + args.buy_tx_cost) * args.price
     monthly_pmt = monthly_payment(1.0 - args.down_pct, args.mortgage_real, args.term) * args.price
     gross_amortization_years = args.price / (args.rent * 12.0)
+    refi_year_selected, refi_rate_selected = choose_refi_plan(
+        1.0 - args.down_pct, args.mortgage_real, args.term, args.refi_target_real,
+        args.refi_normalize_years, args.refi_cost
+    )
 
     if mortgage_real_is_fallback:
         print(f"RESULT|WARNING|MORTGAGE_RATE_DEFAULTED|used={args.mortgage_real*100:.2f}% (not supplied -- "
@@ -289,11 +320,17 @@ def main():
     print(f"RESULT|GROSS_AMORTIZATION_YEARS|{gross_amortization_years:.1f}")
     print(f"RESULT|INITIAL_OUTLAY|{initial_outlay:.0f}")
     print(f"RESULT|MONTHLY_PAYMENT|{monthly_pmt:.0f}")
-    print(f"RESULT|REFI|diff_pct={diff_dyn:+.1f}")
+    print(f"RESULT|REFI|diff_pct={diff_dyn:+.1f}|selected_year={refi_year_selected if refi_year_selected else 'NONE'}|selected_real_rate={(f'{refi_rate_selected*100:.2f}%' if refi_rate_selected is not None else 'NONE')}")
     print(f"RESULT|HURDLE|TIE_REAL={h_tie*100:+.2f}%|TIE_NOMINAL={to_nominal(h_tie)*100:+.2f}%|SATURATED={sat_tie}")
     print(f"RESULT|HURDLE|PASS_15_REAL={h_pass15*100:+.2f}%|PASS_15_NOMINAL={to_nominal(h_pass15)*100:+.2f}%|SATURATED={sat_15}")
     print(f"RESULT|HURDLE|PASS_35_REAL={h_pass35*100:+.2f}%|PASS_35_NOMINAL={to_nominal(h_pass35)*100:+.2f}%|SATURATED={sat_35}")
     print(f"RESULT|BENCHMARK|SP500_NET_REAL=7.80%")
+    if not sat_tie:
+        print(f"RESULT|ALPHA|TIE_VS_SP500={(h_tie-0.078)*100:+.2f}pp")
+    if not sat_15:
+        print(f"RESULT|ALPHA|PASS_15_VS_SP500={(h_pass15-0.078)*100:+.2f}pp")
+    if not sat_35:
+        print(f"RESULT|ALPHA|PASS_35_VS_SP500={(h_pass35-0.078)*100:+.2f}pp")
 
     print("---")
     print(f"Gayrimenkul & Kredi Ozeti: {args.price:.0f} TL | Aylik Kira: {args.rent:.0f} TL | "

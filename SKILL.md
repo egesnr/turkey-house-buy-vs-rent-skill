@@ -1,14 +1,14 @@
 ---
 name: turkey-buy-vs-rent
-description: Turkish Real Estate Buy vs Rent & Invest Financial Engine (v2.3)
+description: Turkish Real Estate Buy vs Rent & Invest Financial Engine (v2.4)
 ---
 
-# Turkey Buy vs. Rent Evaluator (v2.3)
+# Turkey Buy vs. Rent Evaluator (v2.4)
 
 ## ⚠️ EXECUTION CONTRACT
 
 1. **Execute the script before writing any numeric response.** Run `scripts/buy_vs_rent.py` via terminal tools before generating output. Every number in your reply must come from its STDOUT.
-2. **If `--price` or `--rent` is missing from what the user gave you, do two things in the same reply: (a) ask for exactly those, and (b) offer `ui/playground.html` as an immediate alternative** ("share the price and rent for an exact calculation, or open the playground to explore freely with your own numbers right now"). Don't make the user answer a Q&A before they learn the playground exists — offer both in the same turn. Only skip the playground mention if the user already gave you real numbers to run.
+2. **Treat the target property's asking/listing price as authoritative; never replace it with an area-average sale price. If rent is not supplied but the property location and basic characteristics are available, research a realistic market rent automatically before running the engine.** Search current rental comparables in the same district/neighborhood and filter toward similar room count, size, building age and quality. Use a robust central estimate (prefer median or trimmed mean when enough comparables exist), briefly disclose the estimate and sample quality, and pass it as `--rent`. Ask the user for rent only when there is not enough property/location information to research credible comparables. For a general question with no target property, offer `ui/playground.html`.
 3. **Don't invent scenarios or numbers not printed by the script** (no "Emlak Rallisi", "Boğa Senaryosu", speculative growth figures, etc).
 4. **If STDOUT includes a `RESULT|WARNING|...` line, surface it to the user** (briefly, one sentence) rather than dropping it — it means an assumption was defaulted rather than researched.
 5. **Never modify `scripts/buy_vs_rent.py` or `ui/playground.html`.** These are fixed, version-controlled tools, not drafts. If execution fails, the script prints `RESULT|ERROR|<reason>` and exits — the fix is to correct the CLI arguments (or ask the user for the missing/corrected value) and re-run, never to edit the source to "make it pass." If you encounter an error the script itself doesn't explain, stop and show the user the raw error rather than patching the file.
@@ -17,7 +17,7 @@ description: Turkish Real Estate Buy vs Rent & Invest Financial Engine (v2.3)
 ---
 
 ## Purpose & Overview
-Evaluates real estate purchase vs. renting + investing (stocks/funds) in Turkey using quantitative financial modeling. Accounts for inflation-indexed capital gains tax, dynamic refinancing, demand shocks, P/R mean reversion, and buy/sell-side transaction fees.
+Evaluates real estate purchase vs. renting + investing (stocks/funds) in Turkey using quantitative financial modeling. Accounts for inflation-indexed capital gains tax, economically-optimal dynamic refinancing, P/R mean reversion, and buy/sell-side transaction fees.
 
 ## When to Invoke This Skill
 Trigger this skill when the user prompt contains:
@@ -28,6 +28,14 @@ Trigger this skill when the user prompt contains:
 ---
 
 ## Execution Rules & CLI Invocation
+
+### Step 0: Comparable-Rent Protocol (when target rent is not supplied)
+
+1. Keep the user's/listing's target sale price unchanged.
+2. Search the web for current rental listings in the same neighborhood/district.
+3. Filter toward the target property's room count, approximate m², building age and quality. Exclude obvious luxury/residence/furnished outliers unless the target matches them.
+4. Use a robust central estimate of the comparable rents and pass it as `--rent`. State the estimated rent and enough context for the user to understand its quality.
+5. Comparable sale prices may be used only as a sanity check; do not replace the target listing price.
 
 ### Step 1: Dynamic Mortgage Rate Protocol (do this before running the script)
 
@@ -41,10 +49,10 @@ Trigger this skill when the user prompt contains:
 ### Step 2: Execute the script
 
 ```bash
-python scripts/buy_vs_rent.py --price <PRICE> --rent <RENT> --mortgage-real <VALUE> --down-pct <DOWN_PCT|default=0.50> --hold 10
+python scripts/buy_vs_rent.py --price <PRICE> --rent <RESEARCHED_OR_SUPPLIED_RENT> --mortgage-real <VALUE> --down-pct <DOWN_PCT|default=0.50> --hold 10
 ```
 
-- `--price`, `--rent`: required, no defaults — ask the user if missing (see Execution Contract above).
+- `--price`: required and must remain the target listing price. `--rent`: required by the CLI, but research it automatically from comparable rentals when the user has not supplied it and enough property details are available.
 - `--down-pct`: defaults to `0.50` if the user doesn't specify.
 - `--hold`: planning horizon in years. **Default 10 unless the user explicitly requests otherwise.**
 - `--term`: mortgage term in years (default `10`).
@@ -86,14 +94,21 @@ Your reply to the user should be built from the STDOUT fields, in this shape:
 ### Section 2 — Hurdle Rate Karar Matrisi
 Render a table from the three `RESULT|HURDLE|...` lines (TIE / +15% / +35%), showing both the real and nominal return each target needs. **If a line's `SATURATED` flag is `True`, don't print a fake percentage** — say plainly that no realistic hurdle rate exists at these inputs (one side dominates regardless of stock performance), per the script's own message.
 
-### Section 3 — Benchmark
-Compare the TIE hurdle rate against `RESULT|BENCHMARK|SP500_NET_REAL` (currently 7.80%) and note whether historically-plausible stock returns would be enough to beat buying.
+### Section 3 — Benchmark & Required Alpha
+Compare all three hurdle rates against `RESULT|BENCHMARK|SP500_NET_REAL` (currently 7.80%). Surface the corresponding `RESULT|ALPHA|...` values prominently: this is the extra annual real performance above the normalized equity benchmark required to tie buying, beat it by 15%, or beat it by 35%. Treat the benchmark as a long-run normalized reference, not a guaranteed forward return.
 
 **Don't** add lifestyle/behavioral advice ("ev alırsan kafan rahat eder" etc.) — keep it quantitative.
 
 ---
 
-## Notes on Removed Features (v2.2 → v2.3)
+## Notes on Removed Features (v2.2 → v2.4)
 
 - Monte Carlo simulation and the `--sims`/`--stock-vol`/`--appreciation-vol` flags were removed in v2.2 and are gone entirely now (the flags previously did nothing since the function was deleted but the flags stayed — that's fixed). Say so if the user asks about volatility ranges; it can be re-added as an explicit feature request.
 - `--export-html` and the standalone `generate_ui.py` script are removed. There is now exactly one interactive UI: `ui/playground.html`, described above.
+
+
+## v2.4 Refinancing Principle
+- Do not force refinancing in a fixed calendar year.
+- Model the real mortgage rate as converging from today's researched real rate toward `--refi-target-real` over `--refi-normalize-years`.
+- The engine evaluates candidate refinance years including `--refi-cost` and selects refinancing only when it reduces total remaining real debt-service cost.
+- Do not add a separate property-price demand shock merely because refinancing occurs. P/R normalization remains the property valuation mechanism.

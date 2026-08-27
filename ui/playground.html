@@ -1,233 +1,117 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ev Al vs Kirada Kal — Interaktif Playground</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --primary: #2c3e50; --buy-color: #27ae60; --rent-color: #e67e22; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #333; margin: 0; padding: 20px; }
-        .card { max-width: 1000px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h2 { color: var(--primary); margin-top: 0; border-bottom: 2px solid #edf2f7; padding-bottom: 10px; }
-        .layout { display: grid; grid-template-columns: 350px 1fr; gap: 25px; }
-        .control-group { margin-bottom: 15px; }
-        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #4a5568; }
-        input[type=range] { width: 100%; }
-        .val-badge { float: right; font-weight: bold; color: #3182ce; }
-        .banner { padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 12px; }
-        .banner.buy { background: #e6fffa; color: #234e52; border: 1px solid #b2f5ea; }
-        .banner.rent { background: #fffaf0; color: #744210; border: 1px solid #feebc8; }
-        .hurdle { font-size: 13px; color: #4a5568; text-align: center; margin-bottom: 20px; }
-        .chart-container { position: relative; height: 320px; }
-        .assumptions { margin-top: 18px; padding-top: 14px; border-top: 1px solid #edf2f7; font-size: 12px; color: #94a3b8; line-height: 1.6; }
-    </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ev Al vs Kirada Kal — Karar Playground</title>
+<style>
+body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f5f7fa;margin:0;padding:20px;color:#172033}
+.card{max-width:980px;margin:auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 5px 22px #00000012}
+h2{margin:0 0 4px}.sub{color:#667085;margin:0 0 20px}.grid{display:grid;grid-template-columns:340px 1fr;gap:26px}
+.control{margin:15px 0}.control label{display:flex;justify-content:space-between;font-size:14px;font-weight:700}.val{font-variant-numeric:tabular-nums;color:#175cd3}
+input[type=range]{width:100%;margin-top:8px}
+.hurdles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.h{padding:14px;border:1px solid #e4e7ec;border-radius:12px;background:#fafafa}.h small{display:block;color:#667085;min-height:36px}.h b{display:block;font-size:20px;margin-top:7px}
+.scenario{margin-top:14px;padding:18px;border-radius:13px;background:#f8fafc;border:1px solid #e4e7ec}
+.verdict{font-size:20px;font-weight:850;margin-bottom:12px}.wealth{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{padding:12px;background:#fff;border-radius:10px;border:1px solid #eaecf0}.metric small{display:block;color:#667085}.metric b{font-size:18px}
+.benchmark{margin-top:12px;padding:12px;border-radius:10px;background:#f9fafb;font-size:13px;color:#475467}
+.note{font-size:12px;color:#667085;line-height:1.55;margin-top:18px;border-top:1px solid #eee;padding-top:14px}
+.good{color:#067647}.warn{color:#b54708}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.hurdles,.wealth{grid-template-columns:1fr}}
+</style>
 </head>
-<body>
-<div class="card">
-    <h2>🏠 Ev Almak mı, Kirada Kalmak mı? — Playground</h2>
-    <div id="banner" class="banner buy">HESAPLANIYOR...</div>
-    <div id="hurdle" class="hurdle"></div>
-
-    <div class="layout">
-        <div class="controls">
-            <div class="control-group">
-                <label>Konut Fiyatı: <span id="v_price" class="val-badge">0 TL</span></label>
-                <input type="range" id="price" min="3000000" max="25000000" step="250000" value="7850000">
-            </div>
-            <div class="control-group">
-                <label>Aylık Kira: <span id="v_rent" class="val-badge">0 TL</span></label>
-                <input type="range" id="rent" min="15000" max="150000" step="1000" value="42000">
-            </div>
-            <div class="control-group">
-                <label>Peşinat Oranı (%): <span id="v_down" class="val-badge">%0</span></label>
-                <input type="range" id="down" min="15" max="80" step="5" value="50">
-            </div>
-            <div class="control-group">
-                <label>Kredi Faizi (Reel %): <span id="v_mortgage" class="val-badge">%0</span></label>
-                <input type="range" id="mortgage" min="2" max="25" step="0.5" value="13.8">
-            </div>
-            <div class="control-group">
-                <label>Borsa Getirisi (TÜFE+ %): <span id="v_stock" class="val-badge">%0</span></label>
-                <input type="range" id="stock" min="0" max="20" step="0.5" value="5">
-            </div>
-            <div class="control-group">
-                <label>Vade / Ufuk (Yıl): <span id="v_hold" class="val-badge">0 Yıl</span></label>
-                <input type="range" id="hold" min="3" max="20" step="1" value="10">
-            </div>
-            <div class="assumptions">
-                Bu playground, CLI script'iyle (buy_vs_rent.py) <strong>aynı finansal motoru</strong> kullanır —
-                yaklaşık/basitleştirilmiş bir model değildir. Slider'a bağlı olmayan varsayımlar CLI varsayılanlarıyla
-                sabittir: 10 yıl kredi vadesi, 3. yılda %4 reele refinansman, alım/satım masrafı %2/%4,
-                yıllık %1.5 sahiplik maliyeti, kümülatif enflasyon 1.8x, P/R normal değeri 18, reel kira artışı %1/yıl.
-                Bunları değiştirmek için CLI'ı ilgili flag'lerle çalıştırın.
-            </div>
-        </div>
-        <div class="chart-container">
-            <canvas id="wealthChart"></canvas>
-        </div>
-    </div>
+<body><div class="card">
+<h2>🏠 Ev Almak mı, Kirada Kalıp Yatırım mı?</h2>
+<p class="sub">Fiyat, kira, peşinat ve yatırım beklentini değiştir; karar eşikleri anında güncellensin.</p>
+<div class="grid">
+<div>
+<div class="control"><label>Konut fiyatı <span id="priceV" class="val"></span></label><input id="price" type="range" min="3000000" max="25000000" step="250000" value="8000000"></div>
+<div class="control"><label>Aylık kira <span id="rentV" class="val"></span></label><input id="rent" type="range" min="15000" max="150000" step="1000" value="48000"></div>
+<div class="control"><label>Peşinat <span id="downV" class="val"></span></label><input id="down" type="range" min="15" max="80" step="5" value="50"></div>
+<div class="control"><label>Aylık kredi faizi <span id="mortgageV" class="val"></span></label><input id="mortgage" type="range" min="1.5" max="5.0" step=".05" value="3.00"></div>
+<div class="control"><label>Vade / ufuk <span id="holdV" class="val"></span></label><input id="hold" type="range" min="3" max="20" step="1" value="10"></div>
+<div class="control"><label>Beklenen yatırım getirisi <span id="stockV" class="val"></span></label><input id="stock" type="range" min="0" max="20" step=".5" value="7.5"></div>
+<div class="benchmark"><b>Brüt amortisman:</b> <span id="pr"></span><br><b>Model benchmark:</b> TÜFE + %7,8 net reel/yıl</div>
 </div>
 
+<div>
+<div class="hurdles">
+<div class="h"><small>🟰 Ev almakla eşitlenmek</small><b id="tie">—</b></div>
+<div class="h"><small>📈 Ev almaktan %15 daha yüksek servet</small><b id="plus15">—</b></div>
+<div class="h"><small>🚀 Ev almaktan %35 daha yüksek servet</small><b id="plus35">—</b></div>
+</div>
+
+<div class="scenario">
+<div id="verdict" class="verdict">Hesaplanıyor…</div>
+<div class="wealth">
+<div class="metric"><small>Ev alma net serveti</small><b id="buyW">—</b></div>
+<div class="metric"><small>Kiracı yatırım portföyü</small><b id="rentW">—</b></div>
+<div class="metric"><small>10. yıl servet farkı</small><b id="diff">—</b></div>
+<div class="metric"><small>İlk yıl aylık kredi</small><b id="payment">—</b></div>
+</div>
+<div id="gap" class="benchmark"></div>
+</div>
+</div>
+</div>
+
+<div class="note" id="modelInfo"><strong>Model bilgileri:</strong> Güncelleniyor…</div>
+</div>
 <script>
-// ---- Faithful port of simulate_one() / find_hurdle_rate() from buy_vs_rent.py ----
-// Verified against the Python CLI with matching inputs (diff_pct within 0.01pp).
-// Fixed assumptions below mirror the script's own CLI defaults exactly.
-const FIXED = {
-    term: 10, ownCost: 0.015, buyTxCost: 0.02, sellTxCost: 0.04, cumInflation: 1.8,
-    normalPr: 18.0, yearsToClose: 7, rentGrowth: 0.01, refiYear: 3, refiRate: 0.04, demandAlpha: 1.2
-};
-
-function derivedCatchupRate(currentPr, normalPr, rentGrowth, yearsToClose) {
-    yearsToClose = Math.max(1, yearsToClose);
-    const gap = currentPr / normalPr - 1;
-    return rentGrowth - (1 / yearsToClose) * Math.log(1 + gap);
+const F={term:10,own:.015,buyTx:.02,sellTx:.04,cumInf:1.8,normalPr:18,close:7,rentGrowth:.01,refiTarget:.04,refiNormalizeYears:5,refiCost:.02,benchmark:.078,expectedInflation:.2369};
+function pay(l,r,y){const m=r/12,n=y*12;return r===0?l/n:(l*m)/(1-Math.pow(1+m,-n))}
+function balance(l,r,term,e){if(e>=term)return 0;const m=r/12,n=term*12,t=e*12;if(r===0)return l*(1-t/n);return l*(Math.pow(1+m,n)-Math.pow(1+m,t))/(Math.pow(1+m,n)-1)}
+function chooseRefi(initialLoan,startRate,term){
+ let original=pay(initialLoan,startRate,term),best={cost:original*term*12,year:null,rate:null};
+ if(F.refiTarget>=startRate)return best;
+ for(let year=1;year<term;year++){
+   let frac=Math.min(1,year/Math.max(1,F.refiNormalizeYears));
+   let market=startRate+(F.refiTarget-startRate)*frac;
+   let b=balance(initialLoan,startRate,term,year),remain=term-year,newLoan=b*(1+F.refiCost);
+   let np=pay(newLoan,market,remain),cost=original*year*12+np*remain*12;
+   if(cost<best.cost)best={cost,year,rate:market};
+ }
+ return best;
 }
-
-function monthlyPayment(loan, annualRate, termYears) {
-    const mr = annualRate / 12;
-    const months = termYears * 12;
-    if (mr === 0) return loan / months;
-    return (loan * mr) / (1 - Math.pow(1 + mr, -months));
+function catchup(pr){return F.rentGrowth-Math.log(1+(pr/F.normalPr-1))/Math.max(1,F.close)}
+function sim(price,rent,down,hold,stock,mortgageReal){
+ let initialLoan=1-down,plan=chooseRefi(initialLoan,mortgageReal,F.term);
+ let rate=mortgageReal,loan=initialLoan,term=F.term,e=0,pmt=pay(loan,rate,term),first=pmt*price,H=1,port=down+F.buyTx;
+ const r0=rent/price,a=catchup(price/(rent*12));
+ for(let y=1;y<=hold;y++){
+  e++; H*=1+(y<=F.close?a:F.rentGrowth);
+  if(plan.year===y){loan=balance(loan,rate,term,e-1)*(1+F.refiCost);term=F.term-y;rate=plan.rate;e=1;pmt=pay(loan,rate,term)}
+  const ry=r0*Math.pow(1+F.rentGrowth,y-1),own=F.own*H,annual=e<=term?pmt:0;
+  port=port*(1+stock)+(12*annual+own-12*ry);
+ }
+ const b=balance(loan,rate,term,e),sale=H*(1-F.sellTx);let tax=0;if(hold<5)tax=Math.max(0,sale-F.cumInf)*.20;
+ return {buy:(sale-b-tax)*price,rent:port*price,first,plan};
 }
-
-function remainingBalance(loan, annualRate, termYears, yearsElapsed) {
-    if (yearsElapsed >= termYears) return 0.0;
-    const mr = annualRate / 12;
-    const nMonths = termYears * 12;
-    const tMonths = yearsElapsed * 12;
-    if (mr === 0) return loan * (1 - tMonths / nMonths);
-    const top = Math.pow(1 + mr, nMonths) - Math.pow(1 + mr, tMonths);
-    const bottom = Math.pow(1 + mr, nMonths) - 1;
-    return (loan * top) / bottom;
+function hurdle(price,rent,down,hold,mult,mortgageReal){
+ const target=sim(price,rent,down,hold,0,mortgageReal).buy*mult;let lo=-.5,hi=3;
+ for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(sim(price,rent,down,hold,mid,mortgageReal).rent<target)lo=mid;else hi=mid}
+ const x=(lo+hi)/2;return {x,sat:x<=-.30||x>=.40};
 }
-
-function simulateSeries(p) {
-    let currentPay = monthlyPayment(1.0 - p.downPct, p.mortgageRate, FIXED.term);
-    let currentLoanBase = 1.0 - p.downPct;
-    let currentTerm = FIXED.term;
-    let currentRate = p.mortgageRate;
-    let elapsedSinceRefi = 0;
-
-    const r0Month = p.rentMonth / p.price;
-    let H = 1.0;
-    let portfolio = p.downPct + FIXED.buyTxCost;
-    const series = [];
-
-    for (let year = 1; year <= p.hold; year++) {
-        elapsedSinceRefi += 1;
-        let baseGrowth = year <= FIXED.yearsToClose ? p.aCatchup : FIXED.rentGrowth;
-        const refiTriggers = FIXED.refiYear && year === FIXED.refiYear && FIXED.refiRate < p.mortgageRate;
-        if (refiTriggers) baseGrowth += FIXED.demandAlpha * (p.mortgageRate - FIXED.refiRate);
-        H *= (1 + baseGrowth);
-
-        if (refiTriggers) {
-            const balBefore = remainingBalance(currentLoanBase, currentRate, currentTerm, elapsedSinceRefi - 1);
-            currentLoanBase = balBefore * 1.02;
-            currentTerm = FIXED.term - (FIXED.refiYear - 1);
-            currentRate = FIXED.refiRate;
-            elapsedSinceRefi = 1;
-            currentPay = monthlyPayment(currentLoanBase, currentRate, currentTerm);
-        }
-
-        const rentI = r0Month * Math.pow(1 + FIXED.rentGrowth, year - 1);
-        const ownCostI = FIXED.ownCost * H;
-        const payThisYear = elapsedSinceRefi <= currentTerm ? currentPay : 0.0;
-        const diff = 12 * payThisYear + ownCostI - 12 * rentI;
-        portfolio = portfolio * (1 + p.stockReturn) + diff;
-
-        const balanceAtYear = remainingBalance(currentLoanBase, currentRate, currentTerm, elapsedSinceRefi);
-        const netSaleAtYear = H * (1 - FIXED.sellTxCost);
-        let taxAtYear = 0.0;
-        if (year < 5) {
-            const gain = Math.max(0.0, netSaleAtYear - FIXED.cumInflation);
-            taxAtYear = gain * 0.20;
-        }
-        series.push({ year, buyWealth: netSaleAtYear - balanceAtYear - taxAtYear, rentWealth: portfolio });
-    }
-    const final = series[series.length - 1];
-    return { buyWealth: final.buyWealth, rentWealth: final.rentWealth, series };
+const tl=n=>Math.round(n).toLocaleString("tr-TR")+" TL";
+const pct=x=>"TÜFE "+(x>=0?"+":"")+(x*100).toFixed(1)+"%";
+function setH(id,h){document.getElementById(id).textContent=h.sat?"Gerçekçi aralık dışında":pct(h.x)}
+function render(){
+ const price=+priceEl.value,rent=+rentEl.value,down=+downEl.value/100,hold=+holdEl.value,stock=+stockEl.value/100;
+ const monthlyMortgage=+mortgageEl.value/100;
+ const annualNominal=Math.pow(1+monthlyMortgage,12)-1;
+ const mortgageReal=(1+annualNominal)/(1+F.expectedInflation)-1;
+ priceV.textContent=tl(price);rentV.textContent=tl(rent);downV.textContent="%"+downEl.value;holdV.textContent=hold+" yıl";stockV.textContent="TÜFE + %"+(+stockEl.value).toFixed(1);
+ mortgageV.textContent="%"+(+mortgageEl.value).toFixed(2)+"/ay";
+ pr.textContent=(price/(rent*12)).toFixed(1)+" yıl";
+ const t=hurdle(price,rent,down,hold,1,mortgageReal),p15=hurdle(price,rent,down,hold,1.15,mortgageReal),p35=hurdle(price,rent,down,hold,1.35,mortgageReal);
+ setH("tie",t);setH("plus15",p15);setH("plus35",p35);
+ const s=sim(price,rent,down,hold,stock,mortgageReal),d=s.rent-s.buy;
+ buyW.textContent=tl(s.buy);rentW.textContent=tl(s.rent);diff.textContent=(d>=0?"+":"-")+tl(Math.abs(d));payment.textContent=tl(s.first);
+ if(d>=0){verdict.className="verdict good";verdict.textContent="📈 Kirada kal + yatırım "+tl(d)+" önde";}
+ else{verdict.className="verdict warn";verdict.textContent="🏠 Ev almak "+tl(-d)+" önde";}
+ if(!t.sat){const a0=(t.x-F.benchmark)*100,a15=(p15.x-F.benchmark)*100,a35=(p35.x-F.benchmark)*100;gap.innerHTML="<b>S&P benchmark: TÜFE + %7,8.</b> Gerekli ekstra reel performans → Eşitlenme: <b>"+(a0>=0?"+":"")+a0.toFixed(1)+" puan</b> · %15 geçmek: <b>"+(a15>=0?"+":"")+a15.toFixed(1)+" puan</b> · %35 geçmek: <b>"+(a35>=0?"+":"")+a35.toFixed(1)+" puan</b>.";}
+ else gap.textContent="Eşitlenme eşiği modelin gerçekçi getiri aralığının dışında.";
+ const planText=s.plan.year ? (s.plan.year+". yılda yaklaşık reel %"+(s.plan.rate*100).toFixed(1)+" refinansman") : "refinansman ekonomik değil";
+ modelInfo.innerHTML="<strong>Model:</strong> Aylık kredi %"+(+mortgageEl.value).toFixed(2)+" → reel yıllık %"+(mortgageReal*100).toFixed(1)+" · "+planText+" · P/R normalizasyonu · Alım/satım %2/%4";
 }
-
-function findHurdleRate(base, targetMult) {
-    const zeroStock = simulateSeries({ ...base, stockReturn: 0.0 });
-    const target = zeroStock.buyWealth * targetMult;
-    let low = -0.5, high = 3.0;
-    for (let i = 0; i < 50; i++) {
-        const mid = (low + high) / 2;
-        const r = simulateSeries({ ...base, stockReturn: mid });
-        if (r.rentWealth < target) low = mid; else high = mid;
-    }
-    const result = (low + high) / 2;
-    const saturated = result <= -0.30 || result >= 0.40;
-    return { result, saturated };
-}
-
-let chart;
-function initChart() {
-    const ctx = document.getElementById('wealthChart').getContext('2d');
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [
-            { label: 'Ev Alma Serveti (Net, TL)', borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.1)', data: [], fill: true },
-            { label: 'Kiracı Portföy Serveti (TL)', borderColor: '#e67e22', backgroundColor: 'rgba(230,126,34,0.1)', data: [], fill: true }
-        ]},
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-}
-
-function recalculate() {
-    const price = parseFloat(document.getElementById('price').value);
-    const rent = parseFloat(document.getElementById('rent').value);
-    const down = parseFloat(document.getElementById('down').value) / 100;
-    const mortgage = parseFloat(document.getElementById('mortgage').value) / 100;
-    const stock = parseFloat(document.getElementById('stock').value) / 100;
-    const hold = parseInt(document.getElementById('hold').value);
-
-    document.getElementById('v_price').innerText = price.toLocaleString('tr-TR') + " TL";
-    document.getElementById('v_rent').innerText = rent.toLocaleString('tr-TR') + " TL";
-    document.getElementById('v_down').innerText = "%" + (down * 100);
-    document.getElementById('v_mortgage').innerText = "%" + (mortgage * 100).toFixed(1);
-    document.getElementById('v_stock').innerText = "%" + (stock * 100).toFixed(1);
-    document.getElementById('v_hold').innerText = hold + " Yıl";
-
-    const currentPr = price / (rent * 12.0);
-    const aCatchup = derivedCatchupRate(currentPr, FIXED.normalPr, FIXED.rentGrowth, FIXED.yearsToClose);
-    const base = { price, rentMonth: rent, downPct: down, mortgageRate: mortgage, hold, aCatchup };
-
-    const { series, buyWealth, rentWealth } = simulateSeries(base);
-
-    chart.data.labels = series.map(s => s.year + ".Yıl");
-    chart.data.datasets[0].data = series.map(s => Math.round(s.buyWealth * price));
-    chart.data.datasets[1].data = series.map(s => Math.round(s.rentWealth * price));
-    chart.update();
-
-    const banner = document.getElementById('banner');
-    const diffTl = Math.round(Math.abs(buyWealth - rentWealth) * price / 1000000 * 100) / 100;
-    if (buyWealth >= rentWealth) {
-        banner.className = "banner buy";
-        banner.innerText = "🏆 EV SATIN ALMAK KAZANIYOR (Fark: +" + diffTl.toFixed(2) + "M TL)";
-    } else {
-        banner.className = "banner rent";
-        banner.innerText = "📈 KİRADA KALIP YATIRIM YAPMAK KAZANIYOR (Fark: +" + diffTl.toFixed(2) + "M TL)";
-    }
-
-    const tie = findHurdleRate(base, 1.0);
-    const hurdleEl = document.getElementById('hurdle');
-    if (tie.saturated) {
-        hurdleEl.innerText = "Bu ayarlarda, gerçekçi bir borsa getirisi aralığında (TÜFE −30% ile +40% arası) taraflardan biri her koşulda kazanıyor.";
-    } else {
-        hurdleEl.innerText = "Kiracının ev sahibiyle eşitlenmesi için gereken reel getiri: TÜFE " + (tie.result * 100 >= 0 ? "+" : "") + (tie.result * 100).toFixed(1) + "%";
-    }
-}
-
-window.onload = () => {
-    initChart();
-    ['price', 'rent', 'down', 'mortgage', 'stock', 'hold'].forEach(id => {
-        document.getElementById(id).addEventListener('input', recalculate);
-    });
-    recalculate();
-};
-</script>
-</body>
-</html>
+const priceEl=document.getElementById("price"),rentEl=document.getElementById("rent"),downEl=document.getElementById("down"),mortgageEl=document.getElementById("mortgage"),holdEl=document.getElementById("hold"),stockEl=document.getElementById("stock");
+["price","rent","down","mortgage","hold","stock"].forEach(id=>document.getElementById(id).addEventListener("input",render));render();
+</script></body></html>

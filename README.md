@@ -1,4 +1,4 @@
-﻿# 🏠 Turkey House Buy vs. Rent Financial Engine (AI SKILL)
+# 🏠 Turkey House Buy vs. Rent Financial Engine (AI SKILL)
 
 A quantitative financial engine and AI agent skill that evaluates whether **buying a home** or **renting and investing the difference** (in stocks, funds, ETFs) yields greater net wealth over a default **10-year horizon**.
 
@@ -8,7 +8,7 @@ When a user provides a **property listing link or price/rent details**, the engi
 
 ## 🎮 Interactive Web Playground
 
-> 🚀 **Live Demo:** [**👉 Open Live Playground in Your Browser**](https://egesnr.github.io/turkey-house-buy-vs-rent-skill/ui/playground.html)  
+> 🚀 **Live Demo:** [**👉 Open Live Playground in Your Browser**](https://egesnr.github.io/turkey-house-buy-vs-rent-skill/ui/playground.html)
 > *(No installation needed — runs directly in your browser)*
 
 <p align="center">
@@ -16,6 +16,8 @@ When a user provides a **property listing link or price/rent details**, the engi
     <img src="docs/playground_preview.png" alt="Interactive Web Playground Preview" width="760" style="max-width: 100%; border-radius: 8px;">
   </a>
 </p>
+
+The playground is a standalone HTML/JS reimplementation of the same financial engine (verified numerically to match the Python script), for exploring scenarios interactively without running any code. For a real listing, use the CLI below — that's the path the AI skill is required to take so every number is grounded in an actual execution instead of a model guess.
 
 ---
 
@@ -26,29 +28,55 @@ When a user provides a **property listing link or price/rent details**, the engi
 python scripts/buy_vs_rent.py --price 7850000 --rent 42000 --mortgage-real 0.138
 ```
 
-### Exact Output Produced by the Engine:
+### Actual STDOUT
 ```text
-========================================================================================
-                         TÜRKİYE KONUT ALIM / KİRA ANALİZİ
-========================================================================================
-• Konut Fiyatı           : 7,850,000 TL       | Aylık Kira           : 42,000 TL
-• Brüt Amortisman        : 15.6 Yıl           | Başlangıç Nakit      : 4,082,000 TL
-• Aylık Kredi Taksiti    : 60,471 TL          | Analiz Ufku          : 10 Yıl
-
-📊 KARAR MATRİSİ (Hurdle Rates Decision Matrix):
-┌───────────────────────────┬──────────────────────┬────────────────────────┬─────────────┐
-│ Hedef Senaryo             │ Gerekli Reel Getiri  │ Gerekli Nominal Getiri │ S&P 500 Ref │
-├───────────────────────────┼──────────────────────┼────────────────────────┼─────────────┤
-│ 1. Başa Baş (TIE)         │ TÜFE + %6.9          │ ~%13.4 Nominal         │ TÜFE +%7.8  │
-│ 2. Belirgin Fark (+15%)   │ TÜFE + %8.6          │ ~%15.2 Nominal         │ TÜFE +%7.8  │
-│ 3. Ezici Üstünlük (+35%)  │ TÜFE + %10.5         │ ~%17.2 Nominal         │ TÜFE +%7.8  │
-└───────────────────────────┴──────────────────────┴────────────────────────┴─────────────┘
-
-🏆 SONUÇ:
-Mevcut piyasa koşullarında kiracının ev sahibini yakalaması için portföyünde
-yıllık reel TÜFE + %6.9 getiri elde etmesi gerekir.
-========================================================================================
+RESULT|VERDICT|RENT
+RESULT|HORIZON_YEARS|10
+RESULT|PRICE|7850000
+RESULT|RENT_MONTHLY|42000
+RESULT|GROSS_AMORTIZATION_YEARS|15.6
+RESULT|INITIAL_OUTLAY|4082000
+RESULT|MONTHLY_PAYMENT|60471
+RESULT|REFI|diff_pct=-1.0|selected_year=4|selected_real_rate=5.96%
+RESULT|HURDLE|TIE_REAL=+4.90%|TIE_NOMINAL=+11.25%|SATURATED=False
+RESULT|HURDLE|PASS_15_REAL=+6.56%|PASS_15_NOMINAL=+13.01%|SATURATED=False
+RESULT|HURDLE|PASS_35_REAL=+8.49%|PASS_35_NOMINAL=+15.06%|SATURATED=False
+RESULT|BENCHMARK|SP500_NET_REAL=7.80%
+RESULT|ALPHA|TIE_VS_SP500=-2.90pp
+RESULT|ALPHA|PASS_15_VS_SP500=-1.24pp
+RESULT|ALPHA|PASS_35_VS_SP500=+0.69pp
+---
+Gayrimenkul & Kredi Ozeti: 7850000 TL | Aylik Kira: 42000 TL | Brut Amortisman: 15.6 Yil | Baslangic Nakit Cikisi: 4082000 TL | Aylik Taksit: 60471 TL
+DECISION MATRIX (10-Year Horizon):
+ - To TIE with Buying: Renter needs real return TUFE +4.9% (nominal ~+11.2%)
+ - To BEAT Buying by +15%: Renter needs real return TUFE +6.6% (nominal ~+13.0%)
+ - To CRUSH Buying by +35%: Renter needs real return TUFE +8.5% (nominal ~+15.1%)
+ - Benchmark Ref (S&P 500 20-Yr Net): TUFE +7.80%
 ```
+
+The block above the `---` is machine-readable (`RESULT|KEY|VALUE`), meant for an LLM agent to parse without guessing; the block below is a pre-formatted human summary in the same units. This is the real, current output of the command above — not a mockup.
+
+### Reading It as a Table
+
+| Field | Value |
+|---|---|
+| Sale Price | 7,850,000 TL |
+| Monthly Rent | 42,000 TL |
+| Gross Amortization | 15.6 years |
+| Initial Cash Outlay | 4,082,000 TL |
+| Monthly Installment | 60,471 TL |
+| Optimal Refinance | Year 4, real rate 5.96% |
+| **Verdict (10-yr horizon)** | **RENT** (renting + investing leads by 1.0% of property value) |
+
+**Decision Matrix — Hurdle Rates**
+
+| Target Scenario | Required Real Return | Required Nominal Return | vs. S&P 500 Benchmark (TÜFE +7.80%) |
+|---|---|---|---|
+| 🟰 Tie with buying | TÜFE +4.90% | ~11.25% | −2.90pp (easier than benchmark) |
+| 📈 Beat buying by +15% | TÜFE +6.56% | ~13.01% | −1.24pp (easier than benchmark) |
+| 🚀 Crush buying by +35% | TÜFE +8.49% | ~15.06% | +0.69pp (harder than benchmark) |
+
+At these inputs, a renter only needs to match a normal diversified equity return to come out ahead of buying — beating it by 35% would require modestly outperforming the long-run S&P 500 benchmark.
 
 ---
 
@@ -67,11 +95,13 @@ $$a_{\text{catchup}} = g_{\text{rent}} - \frac{1}{T_{\text{close}}} \ln\left(1 +
 
 ---
 
-### 3. Dynamic Refinancing & Demand Shock Elasticity
-If interest rates drop to long-term levels (e.g., Year 3 at $4\%$ real):
-* **Refinanced Principal:** $B_{\text{refi}} = B_3 \cdot (1 + 0.02)$ *(incorporating the statutory 2% early settlement penalty under Turkish Law No. 6502)*.
-* **Demand Shock on House Value:**
-$$\Delta H_{\text{shock}} = 1.2 \cdot (r_{\text{initial}} - r_{\text{refi}})$$
+### 3. Dynamic, Cost-Aware Refinancing
+The engine does **not** force refinancing in a fixed year. It models the market real mortgage rate converging linearly from today's rate toward `--refi-target-real` over `--refi-normalize-years`, then evaluates every candidate year and picks the one that minimizes total remaining real debt service — including the refinancing cost — refinancing only when it's actually cheaper than keeping the original loan:
+$$B_{\text{refi}} = B_{\text{year}} \cdot (1 + c_{\text{refi}})$$
+* $B_{\text{year}}$: Remaining loan balance at the candidate refinance year.
+* $c_{\text{refi}}$: Refinancing cost as a fraction of remaining principal (default 2%).
+
+Refinancing only changes the loan's payment schedule — it is not treated as a signal to also shock the property's value; P/R normalization (formula 2) remains the sole valuation mechanism.
 
 ---
 
@@ -102,7 +132,7 @@ Where target multipliers are:
 * **TIE (1.00x):** Break-even portfolio return.
 * **BEAT (+15% / 1.15x):** Renter achieves 15% higher terminal wealth.
 * **CRUSH (+35% / 1.35x):** Renter achieves 35% higher terminal wealth.
-* **Saturation Check:** If $r_{\text{target}} \le -30\%$ or $\ge +40\%$, flags `SATURATED` (one side structurally dominates across all realistic market returns).
+* **Saturation Check:** If $r_{\text{target}} \le -30\%$ or $\ge +40\%$, flags `SATURATED` — no realistic finite hurdle rate exists at these inputs; one side structurally dominates regardless of stock performance.
 
 ---
 
